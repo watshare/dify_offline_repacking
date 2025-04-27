@@ -43,12 +43,16 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y unzip
+          if [ $? -ne 0 ]; then
+            echo "安装依赖失败"
+            exit 1
+          fi
 
       - name: Run repackaging script
         env:
           GITHUB_API_URL: https://github.com
           MARKETPLACE_API_URL: https://marketplace.dify.ai
-          PIP_MIRROR_URL: https://pypi.org/simple
+          PIP_MIRROR_URL: https://mirrors.aliyun.com/pypi/simple
           SOURCE_TYPE: ${{ github.event.inputs.source_type }}
           GITHUB_REPO: ${{ github.event.inputs.github_repo }}
           RELEASE_TITLE: ${{ github.event.inputs.release_title }}
