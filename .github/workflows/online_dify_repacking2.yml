@@ -33,7 +33,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
+      - name: Debug - Print start message
+        run: echo "Workflow started"
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
