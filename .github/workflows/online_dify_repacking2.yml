@@ -1,0 +1,84 @@
+name: Dify Plugin Repackaging
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_type:
+        description: '插件来源类型 (market, github)'
+        required: true
+        default: github
+      github_repo:
+        description: 'GitHub 仓库地址 (例如: junjiem/dify-plugin-tools-dbquery)，仅在 source_type 为 github 时需要'
+        required: false
+      release_title:
+        description: 'Release 标题 (例如: v0.0.2)，仅在 source_type 为 github 时需要'
+        required: false
+      assets_name:
+        description: 'Assets 名称 (包含 .difypkg 后缀, 例如: db_query.difypkg)，仅在 source_type 为 github 时需要'
+        required: false
+      plugin_author:
+        description: '插件作者 (例如: junjiem)，仅在 source_type 为 market 时需要'
+        required: false
+      plugin_name:
+        description: '插件名称 (例如: mcp_sse)，仅在 source_type 为 market 时需要'
+        required: false
+      plugin_version:
+        description: '插件版本 (例如: 0.0.1)，仅在 source_type 为 market 时需要'
+        required: false
+
+jobs:
+  repackage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+
+      - name: Run repackaging script
+        env:
+          GITHUB_API_URL: https://github.com
+          MARKETPLACE_API_URL: https://marketplace.dify.ai
+          PIP_MIRROR_URL: https://pypi.org/simple
+          SOURCE_TYPE: ${{ github.event.inputs.source_type }}
+          GITHUB_REPO: ${{ github.event.inputs.github_repo }}
+          RELEASE_TITLE: ${{ github.event.inputs.release_title }}
+          ASSETS_NAME: ${{ github.event.inputs.assets_name }}
+          PLUGIN_AUTHOR: ${{ github.event.inputs.plugin_author }}
+          PLUGIN_NAME: ${{ github.event.inputs.plugin_name }}
+          PLUGIN_VERSION: ${{ github.event.inputs.plugin_version }}
+        run: |
+          chmod +x ./plugin_repackaging.sh
+          if [ "$SOURCE_TYPE" = "market" ]; then
+            ./plugin_repackaging.sh market $PLUGIN_AUTHOR $PLUGIN_NAME $PLUGIN_VERSION
+          elif [ "$SOURCE_TYPE" = "github" ]; then
+            ./plugin_repackaging.sh github $GITHUB_REPO $RELEASE_TITLE $ASSETS_NAME
+          else
+            echo "不支持的插件来源类型"
+            exit 1
+          fi
+
+      - name: Get package name
+        id: get_package_name
+        run: |
+          if [ "$SOURCE_TYPE" = "market" ]; then
+            PACKAGE_NAME="${PLUGIN_AUTHOR}-${PLUGIN_NAME}_${PLUGIN_VERSION}"
+          elif [ "$SOURCE_TYPE" = "github" ]; then
+            PACKAGE_NAME="${ASSETS_NAME%.difypkg}-${RELEASE_TITLE}"
+          fi
+          echo "::set-output name=package_name::${PACKAGE_NAME}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.get_package_name.outputs.package_name }}-offline.difypkg
+          path: ./${{ steps.get_package_name.outputs.package_name }}-offline.difypkg
