@@ -1,0 +1,53 @@
+name: Dify Plugin Repackaging
+
+on:
+  workflow_dispatch:
+    inputs:
+      github_repo:
+        description: 'GitHub 仓库地址 (例如: junjiem/dify-plugin-tools-dbquery)'
+        required: true
+      release_title:
+        description: 'Release 标题 (例如: v0.0.2)'
+        required: true
+      assets_name:
+        description: 'Assets 名称 (包含 .difypkg 后缀, 例如: db_query.difypkg)'
+        required: true
+
+jobs:
+  repackage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+
+      - name: Run repackaging script
+        env:
+          GITHUB_API_URL: https://github.com
+          MARKETPLACE_API_URL: https://marketplace.dify.ai
+          PIP_MIRROR_URL: https://mirrors.aliyun.com/pypi/simple
+        run: |
+          chmod +x ./plugin_repackaging.sh
+          ./plugin_repackaging.sh github ${{ github.event.inputs.github_repo }} ${{ github.event.inputs.release_title }} ${{ github.event.inputs.assets_name }}
+
+      - name: Get package name
+        id: get_package_name
+        run: |
+          PACKAGE_NAME="${{ github.event.inputs.assets_name%.difypkg }}-${{ github.event.inputs.release_title }}"
+          echo "::set-output name=package_name::${PACKAGE_NAME}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.get_package_name.outputs.package_name }}-offline.difypkg
+          path: ./${{ steps.get_package_name.outputs.package_name }}-offline.difypkg
