@@ -3,7 +3,7 @@
 
 GITHUB_API_URL=https://github.com
 MARKETPLACE_API_URL=https://marketplace.dify.ai
-PIP_MIRROR_URL=https://mirrors.aliyun.com/pypi/simple
+PIP_MIRROR_URL=https://pypi.org/simple
 
 CURR_DIR=`dirname $0`
 cd $CURR_DIR
@@ -21,11 +21,11 @@ market(){
         exit 1
   fi
   echo "From the Dify Marketplace downloading ..."
-	PLUGIN_AUTHOR=$2
+  PLUGIN_AUTHOR=$2
   PLUGIN_NAME=$3
   PLUGIN_VERSION=$4
   PLUGIN_PACKAGE_PATH=${CURR_DIR}/${PLUGIN_AUTHOR}-${PLUGIN_NAME}_${PLUGIN_VERSION}.difypkg
-	PLUGIN_DOWNLOAD_URL=${MARKETPLACE_API_URL}/api/v1/plugins/${PLUGIN_AUTHOR}/${PLUGIN_NAME}/${PLUGIN_VERSION}/download
+  PLUGIN_DOWNLOAD_URL=${MARKETPLACE_API_URL}/api/v1/plugins/${PLUGIN_AUTHOR}/${PLUGIN_NAME}/${PLUGIN_VERSION}/download
   echo "Downloading ${PLUGIN_DOWNLOAD_URL} ..."
   curl -L -o ${PLUGIN_PACKAGE_PATH} ${PLUGIN_DOWNLOAD_URL}
   if [[ $? -ne 0 ]]; then
@@ -33,7 +33,7 @@ market(){
     exit 1
   fi
   echo "Download success."
-	repackage ${PLUGIN_PACKAGE_PATH}
+  repackage ${PLUGIN_PACKAGE_PATH}
 }
 
 github(){
@@ -85,23 +85,31 @@ repackage(){
   local PACKAGE_PATH=$1
   PACKAGE_NAME_WITH_EXTENSION=`basename ${PACKAGE_PATH}`
   PACKAGE_NAME="${PACKAGE_NAME_WITH_EXTENSION%.*}"
-	echo "Unziping ..."
-	install_unzip
-	unzip -o ${PACKAGE_PATH} -d ${CURR_DIR}/${PACKAGE_NAME}
-	if [[ $? -ne 0 ]]; then
+  echo "Unziping ..."
+  install_unzip
+  unzip -o ${PACKAGE_PATH} -d ${CURR_DIR}/${PACKAGE_NAME}
+  if [[ $? -ne 0 ]]; then
     echo "Unzip failed."
     exit 1
   fi
-	echo "Unzip success."
-	echo "Repackaging ..."
-	cd ${CURR_DIR}/${PACKAGE_NAME}
-	pip download -r requirements.txt -d ./wheels --index-url ${PIP_MIRROR_URL}
-	sed -i '1i\--no-index --find-links=./wheels/' requirements.txt
-	sed -i '/^wheels\//d' .difyignore
-	cd ${CURR_DIR}
-	chmod 755 ${CURR_DIR}/dify-plugin-linux-amd64-5g
-	${CURR_DIR}/dify-plugin-linux-amd64-5g plugin package ${CURR_DIR}/${PACKAGE_NAME} -o ${CURR_DIR}/${PACKAGE_NAME}-offline.difypkg
-	echo "Repackage success."
+  echo "Unzip success."
+  echo "Repackaging ..."
+  cd ${CURR_DIR}/${PACKAGE_NAME}
+  pip download -r requirements.txt -d ./wheels --index-url ${PIP_MIRROR_URL}
+  if [[ $? -ne 0 ]]; then
+    echo "下载 Python 包失败"
+    exit 1
+  fi
+  sed -i '1i\--no-index --find-links=./wheels/' requirements.txt
+  sed -i '/^wheels\//d' .difyignore
+  cd ${CURR_DIR}
+  chmod 755 ${CURR_DIR}/dify-plugin-linux-amd64-5g
+  ${CURR_DIR}/dify-plugin-linux-amd64-5g plugin package ${CURR_DIR}/${PACKAGE_NAME} -o ${CURR_DIR}/${PACKAGE_NAME}-offline.difypkg
+  if [[ $? -ne 0 ]]; then
+    echo "重新打包失败"
+    exit 1
+  fi
+  echo "Repackage success."
 }
 
 install_unzip(){
@@ -118,16 +126,16 @@ install_unzip(){
 }
 
 case "$1" in
-	'market')
-	market $@
-	;;
-	'github')
-	github $@
-	;;
-	'local')
-	_local $@
-	;;
-	*)
+  'market')
+  market $@
+  ;;
+  'github')
+  github $@
+  ;;
+  'local')
+  _local $@
+  ;;
+  *)
 
 echo "usage: $0 {market|github|local}"
 exit 1
