@@ -105,15 +105,16 @@ repackage(){
 }
 
 install_unzip(){
-	rpms=(`rpm -q unzip`)
-	if [ ${#rpms[@]} -ne 1 ]; then
-		echo "Installing unzip ..."
-		yum -y install unzip
-		if [ $? -ne 0 ]; then
-			echo "Install unzip failed."
-			exit 1
-		fi
-	fi
+        rpms=(`rpm -q unzip`)
+        if [ ${#rpms[@]} -ne 1 ]; then
+                echo "Installing unzip ..."
+                #yum -y install unzip
+                apt install -y unzip
+                if [ $? -ne 0 ]; then
+                        echo "Install unzip failed."
+                        exit 1
+                fi
+        fi
 }
 
 case "$1" in
