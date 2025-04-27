@@ -48,6 +48,38 @@ jobs:
             exit 1
           fi
 
+      - name: Validate inputs
+        run: |
+          if [ "$SOURCE_TYPE" = "market" ]; then
+            [ -z "$PLUGIN_AUTHOR" ] && echo "PLUGIN_AUTHOR is required for market" && exit 1
+            [ -z "$PLUGIN_NAME" ] && echo "PLUGIN_NAME is required for market" && exit 1
+            [ -z "$PLUGIN_VERSION" ] && echo "PLUGIN_VERSION is required for market" && exit 1
+          elif [ "$SOURCE_TYPE" = "github" ]; then
+            [ -z "$GITHUB_REPO" ] && echo "GITHUB_REPO is required for github" && exit 1
+            [ -z "$RELEASE_TITLE" ] && echo "RELEASE_TITLE is required for github" && exit 1
+            [ -z "$ASSETS_NAME" ] && echo "ASSETS_NAME is required for github" && exit 1
+          else
+            echo "Invalid SOURCE_TYPE: $SOURCE_TYPE" && exit 1
+          fi
+
+      - name: Check for repackaging script
+        run: |
+          if [ ! -f ./plugin_repackaging.sh ]; then
+            echo "Repackaging script not found!"
+            exit 1
+          fi
+          chmod +x ./plugin_repackaging.sh
+
+      - name: Debugging Info
+        run: |
+          echo "SOURCE_TYPE: $SOURCE_TYPE"
+          echo "GITHUB_REPO: $GITHUB_REPO"
+          echo "RELEASE_TITLE: $RELEASE_TITLE"
+          echo "ASSETS_NAME: $ASSETS_NAME"
+          echo "PLUGIN_AUTHOR: $PLUGIN_AUTHOR"
+          echo "PLUGIN_NAME: $PLUGIN_NAME"
+          echo "PLUGIN_VERSION: $PLUGIN_VERSION"
+
       - name: Run repackaging script
         env:
           GITHUB_API_URL: https://github.com
@@ -61,7 +93,6 @@ jobs:
           PLUGIN_NAME: ${{ github.event.inputs.plugin_name }}
           PLUGIN_VERSION: ${{ github.event.inputs.plugin_version }}
         run: |
-          chmod +x ./plugin_repackaging.sh
           if [ "$SOURCE_TYPE" = "market" ]; then
             ./plugin_repackaging.sh market $PLUGIN_AUTHOR $PLUGIN_NAME $PLUGIN_VERSION
           elif [ "$SOURCE_TYPE" = "github" ]; then
@@ -79,10 +110,17 @@ jobs:
           elif [ "$SOURCE_TYPE" = "github" ]; then
             PACKAGE_NAME="${ASSETS_NAME%.difypkg}-${RELEASE_TITLE}"
           fi
-          echo "::set-output name=package_name::${PACKAGE_NAME}"
+          echo "PACKAGE_NAME=${PACKAGE_NAME}" >> $GITHUB_ENV
+
+      - name: Verify artifact exists
+        run: |
+          if [ ! -f "./${{ env.PACKAGE_NAME }}-offline.difypkg" ]; then
+            echo "Artifact file not found!"
+            exit 1
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ steps.get_package_name.outputs.package_name }}-offline.difypkg
-          path: ./${{ steps.get_package_name.outputs.package_name }}-offline.difypkg
+          name: ${{ env.PACKAGE_NAME }}-offline.difypkg
+          path: ./${{ env.PACKAGE_NAME }}-offline.difypkg
