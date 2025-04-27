@@ -29,8 +29,16 @@ on:
 jobs:
   repackage:
     runs-on: ubuntu-latest
-
     steps:
+      - name: Debugging Info
+        run: |
+         echo "SOURCE_TYPE: $SOURCE_TYPE"
+         echo "GITHUB_REPO: $GITHUB_REPO"
+         echo "RELEASE_TITLE: $RELEASE_TITLE"
+         echo "ASSETS_NAME: $ASSETS_NAME"
+         echo "PLUGIN_AUTHOR: $PLUGIN_AUTHOR"
+         echo "PLUGIN_NAME: $PLUGIN_NAME"
+         echo "PLUGIN_VERSION: $PLUGIN_VERSION"
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Debug - Print start message
